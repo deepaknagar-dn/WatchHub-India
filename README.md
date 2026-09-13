@@ -77,16 +77,16 @@ B.Tech — Artificial Intelligence & Machine Learning / Data Science
 ## 📸 Screenshots
 
 ### 🏠 Home
-![Home](Home.png.png)
+<img src="./Home.png.png" width="800">
 
 ### 🎬 Movies
-![Movies](Movie.png.png)
+<img src="./Movie.png.png" width="800">
 
 ### 📺 Web Series
-![Web Series](webseries.png.png)
+<img src="./webseries.png.png" width="800">
 
 ### 🎭 Cast & Crew
-![Cast & Crew](Cast%26crew.png.png)
+<img src="./Cast&crew.png.png" width="800">
 
 ### 📺 OTT / Where to Watch
-![OTT](OTT%2Cglobal.png.png)
+<img src="./OTT,global.png.png" width="800">
