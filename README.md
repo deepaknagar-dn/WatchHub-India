@@ -4,18 +4,21 @@
 
 🌐 **Live Demo:** https://watchapp-india.streamlit.app/
 
-## ✨ Features
+> 🎬 A smart movie & web-series discovery platform built with Python, Streamlit and TMDB API.
 
-- 🎬 Movie Search
-- 📺 Web Series Search
-- 🔎 Multi-Content Search
-- 🎭 Cast & Crew Information
-- 🤖 Smart Movie & Series Recommendations
-- 🌐 Language-wise Content Discovery
-- 📺 Where to Watch / OTT Providers
-- ▶️ YouTube Trailer Links
-- 📱 Mobile-Friendly Web Interface
-- 🎞️ TMDB API Integration
+[🚀 Live Demo](https://watchapp-india.streamlit.app/) • [📂 GitHub Repository](https://github.com/deepaknagar-dn/WatchHub-India)
+
+## ✨ Key Features
+
+- 🎬 Discover and search movies
+- 📺 Search and explore web series
+- 🎭 Explore cast & crew information
+- 🤖 Get smart movie and series recommendations
+- 🌐 Explore content by language
+- 📺 Find OTT / streaming availability
+- ▶️ Watch official YouTube trailers
+- 🔎 Search across multiple content types
+- 📱 Responsive interface for desktop and mobile
 
 ## 🛠️ Technologies Used
 
