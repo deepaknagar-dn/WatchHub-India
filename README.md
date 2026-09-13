@@ -6,7 +6,7 @@
 
 > 🎬 A smart movie & web-series discovery platform built with Python, Streamlit and TMDB API.
 
-[🚀 Live Demo](https://watchapp-india.streamlit.app/) • [📂 GitHub Repository](https://github.com/deepaknagar-dn/WatchHub-India)
+[🚀 Live Demo](https://movieapp-india.streamlit.app/) • [📂 GitHub Repository](https://github.com/deepaknagar-dn/WatchHub-India)
 
 ## ✨ Key Features
 
