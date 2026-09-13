@@ -73,3 +73,20 @@ WatchHub-India/
 Deepak Nagar
 
 B.Tech — Artificial Intelligence & Machine Learning / Data Science
+
+## 📸 Screenshots
+
+### 🏠 Home
+![Home](Home.png.png)
+
+### 🎬 Movies
+![Movies](Movie.png.png)
+
+### 📺 Web Series
+![Web Series](webseries.png.png)
+
+### 🎭 Cast & Crew
+![Cast & Crew](Cast%26crew.png.png)
+
+### 📺 OTT / Where to Watch
+![OTT](OTT%2Cglobal.png.png)
