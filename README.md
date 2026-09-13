@@ -36,11 +36,29 @@ WatchHub India uses TMDB recommendation and similarity data to find related movi
 
 The application displays available streaming providers and provides links for users to find the selected movie or series on supported platforms.
 
+
+## 📸 Screenshots
+
+### 🏠 Home
+<img src="./Home.png.png" width="800">
+
+### 🎬 Movies
+<img src="./Movie.png.png" width="800">
+
+### 📺 Web Series
+<img src="./webseries.png.png" width="800">
+
+### 🎭 Cast & Crew
+<img src="./Cast&crew.png.png" width="800">
+
+### 📺 OTT / Where to Watch
+<img src="./OTT,global.png.png" width="800">
+
 ## 🚀 Run Locally
 
 Clone the repository:
 
-```bash
+bash
 git clone https://github.com/deepaknagar-dn/WatchHub-India.git
 cd WatchHub-India
 
@@ -74,19 +92,4 @@ Deepak Nagar
 
 B.Tech — Artificial Intelligence & Machine Learning / Data Science
 
-## 📸 Screenshots
 
-### 🏠 Home
-<img src="./Home.png.png" width="800">
-
-### 🎬 Movies
-<img src="./Movie.png.png" width="800">
-
-### 📺 Web Series
-<img src="./webseries.png.png" width="800">
-
-### 🎭 Cast & Crew
-<img src="./Cast&crew.png.png" width="800">
-
-### 📺 OTT / Where to Watch
-<img src="./OTT,global.png.png" width="800">
