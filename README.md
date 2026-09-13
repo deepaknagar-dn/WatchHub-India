@@ -2,7 +2,7 @@
 
 **WatchHub India** is a movie and web-series discovery platform built with Python and Streamlit. It helps users discover movies and web series, explore cast & crew, search content, view recommendations, and find where a title is available to watch.
 
-🌐 **Live Demo:** https://watchapp-india.streamlit.app/
+🌐 **Live Demo:** https://movieapp-india.streamlit.app/
 
 > 🎬 A smart movie & web-series discovery platform built with Python, Streamlit and TMDB API.
 
