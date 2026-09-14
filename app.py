@@ -1,130 +1,162 @@
 import html
 import urllib.parse
 import requests
+import random
 import streamlit as st
 
 # =========================================================
 # PAGE CONFIG
 # =========================================================
-
 st.set_page_config(
-    page_title="MovieHub India - AI",
+    page_title="MovieHub - MD Edition",
     page_icon="🎬",
     layout="wide",
     initial_sidebar_state="collapsed",
 )
 
 # =========================================================
-# SESSION STATE (HISTORY, RATINGS & UI LOCK)
+# SESSION STATE 
 # =========================================================
+if "splash_done" not in st.session_state:
+    st.session_state.splash_done = False
 
-# History aur Ratings save karne ke liye
-if "history" not in st.session_state:
-    st.session_state.history = []
-if "ratings" not in st.session_state:
-    st.session_state.ratings = {}
-
-# UI State lock karne ke liye (Taaki rating dene par results gayab na hon)
+if "history" not in st.session_state: st.session_state.history = []
 if "ui" not in st.session_state:
     st.session_state.ui = {
-        "search_results": [],
-        "m_seed": None, "m_recs": [],
-        "tv_seed": None, "tv_recs": [],
-        "cast_person": None, "cast_credits": []
+        "home_search_results": [], "m_seed": None, "m_recs": [],
+        "tv_seed": None, "tv_recs": [], "cast_person": None, 
+        "cast_credits": [], "surprise_movie": None
     }
 
 def add_to_history(item, media_type="movie"):
-    item_copy = dict(item)
-    item_copy["media_type"] = media_type 
+    item_copy = dict(item); item_copy["media_type"] = media_type 
     history = [x for x in st.session_state.history if str(x.get("id")) != str(item_copy.get("id"))]
     history.insert(0, item_copy)
     st.session_state.history = history[:20] 
 
 # =========================================================
+# 🔴 SMOOTH MD LOGO RED & BLACK SPLASH
+# =========================================================
+if not st.session_state.splash_done:
+    st.markdown("""
+        <style>
+        #md-splash {
+            position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+            background-color: #000000; z-index: 9999999;
+            display: flex; justify-content: center; align-items: center;
+            animation: smoothFade 0.6s ease-in-out 2.0s forwards;
+        }
+        .md-logo-text {
+            font-family: 'Arial Black', Impact, sans-serif;
+            font-size: clamp(80px, 18vw, 200px);
+            font-weight: 900;
+            color: #E50914;
+            text-transform: uppercase;
+            letter-spacing: 4px;
+            text-align: center;
+            animation: mdZoomSmooth 2.0s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+        @keyframes mdZoomSmooth {
+            0% { opacity: 0; transform: scale(0.6); filter: blur(10px); }
+            30% { opacity: 1; transform: scale(1); filter: blur(0px); text-shadow: 0 0 40px rgba(229, 9, 20, 0.8); }
+            85% { opacity: 1; transform: scale(1.1); text-shadow: 0 0 80px rgba(229, 9, 20, 1); }
+            100% { opacity: 0; transform: scale(2.5); filter: blur(15px); visibility: hidden; }
+        }
+        @keyframes smoothFade {
+            to { opacity: 0; visibility: hidden; display: none; }
+        }
+        </style>
+        <div id="md-splash">
+            <div class="md-logo-text">MD</div>
+        </div>
+    """, unsafe_allow_html=True)
+    st.session_state.splash_done = True
+
+# =========================================================
 # TMDB CONFIG
 # =========================================================
-
 TMDB_TOKEN = str(st.secrets.get("TMDB_API_KEY", "")).strip()
 TMDB_BASE = "https://api.themoviedb.org/3"
 IMAGE_BASE = "https://image.tmdb.org/t/p/w500"
 PROVIDER_LOGO_BASE = "https://image.tmdb.org/t/p/w92"
 
 # =========================================================
-# GLOBAL CSS
+# PREMIUM CUSTOM CSS FOR MAIN UI & CLEAN ARRANGEMENT
 # =========================================================
-
 st.markdown(
     """
     <style>
     [data-testid="stAppViewContainer"] {
-        background:
-            radial-gradient(circle at 10% 0%, rgba(91, 33, 182, .20), transparent 28%),
-            radial-gradient(circle at 90% 8%, rgba(190, 24, 93, .16), transparent 25%),
-            #07070b;
+        background: #0b0b0d !important;
+        background-image: radial-gradient(circle at top left, rgba(229, 9, 20, 0.08) 0%, transparent 40%),
+                          radial-gradient(circle at bottom right, rgba(124, 58, 237, 0.05) 0%, transparent 40%) !important;
+        color: #ffffff;
     }
     [data-testid="stHeader"] { background: transparent; }
-    #MainMenu { visibility: hidden; }
-    footer { visibility: hidden; }
-    .block-container { max-width: 1450px; padding-top: 1.5rem; padding-bottom: 4rem; }
-    .brand-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
-    .brand { font-size: 24px; font-weight: 900; letter-spacing: -.8px; color: #fff; }
-    .brand span { color: #a78bfa; }
-    .top-pill { padding: 7px 13px; border-radius: 999px; background: rgba(255,255,255,.055); border: 1px solid rgba(255,255,255,.09); color: #aaa8b7; font-size: 12px; }
-    .hero-wrap {
-        position: relative; overflow: hidden; min-height: 455px; border-radius: 30px; margin-bottom: 28px;
-        border: 1px solid rgba(255,255,255,.09);
-        background: radial-gradient(circle at 82% 25%, rgba(124,58,237,.42), transparent 32%),
-                    radial-gradient(circle at 92% 80%, rgba(236,72,153,.24), transparent 30%),
-                    linear-gradient(115deg, #09090d 0%, #0d0c15 55%, #14101c 100%);
-        box-shadow: 0 35px 90px rgba(0,0,0,.48), inset 0 1px 0 rgba(255,255,255,.04);
+    #MainMenu, footer { display: none !important; }
+    .block-container { max-width: 1400px; padding: 1rem 2rem 5rem 2rem; }
+
+    .hero-banner {
+        position: relative; width: 100%; height: 300px; border-radius: 20px; overflow: hidden; margin-bottom: 25px;
+        background: url('https://images.unsplash.com/photo-1626814026160-2237a95fc5a0?q=80&w=2070&auto=format&fit=crop') center/cover;
+        border: 1px solid rgba(255,255,255,0.05); box-shadow: 0 20px 50px rgba(0,0,0,0.8);
     }
-    .hero-glow { position: absolute; width: 430px; height: 430px; right: -100px; top: -110px; border-radius: 50%; background: radial-gradient(circle, rgba(139,92,246,.24), transparent 68%); filter: blur(8px); }
-    .hero-content { position: relative; z-index: 2; padding: 62px 64px; max-width: 820px; }
-    .eyebrow { color: #c4b5fd; font-size: 12px; font-weight: 900; letter-spacing: 3px; margin-bottom: 17px; }
-    .hero-title { font-size: clamp(48px, 7vw, 86px); line-height: .92; letter-spacing: -4px; font-weight: 950; margin: 0 0 22px 0; color: #fff; }
-    .hero-title .accent { background: linear-gradient(90deg, #c4b5fd, #f9a8d4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-    .hero-copy { max-width: 680px; color: #b0aebb; font-size: 16px; line-height: 1.75; margin-bottom: 24px; }
-    .hero-tags span { display: inline-block; margin: 0 7px 7px 0; padding: 8px 12px; border-radius: 999px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.09); color: #dedbe6; font-size: 12px; }
-    .section-head { display: flex; align-items: end; justify-content: space-between; gap: 15px; margin: 32px 0 17px 0; }
-    .section-title { font-size: 28px; font-weight: 900; letter-spacing: -.8px; color: #fff; margin: 0; }
-    .section-subtitle { color: #858292; font-size: 13px; margin-top: 5px; }
-    .movie-card { border-radius: 22px; padding: 12px; background: linear-gradient(145deg, rgba(255,255,255,.075), rgba(255,255,255,.025)); border: 1px solid rgba(255,255,255,.08); box-shadow: 0 18px 45px rgba(0,0,0,.25), inset 0 1px 0 rgba(255,255,255,.035); margin-bottom: 12px; }
-    .poster-frame { overflow: hidden; border-radius: 16px; background: #15151d; }
-    .card-title { color: #fff; font-size: 18px; line-height: 1.25; font-weight: 850; margin: 12px 2px 7px 2px; }
-    .card-meta { color: #9c99a8; font-size: 12px; margin: 0 2px 9px 2px; }
-    .rating { color: #facc15; font-weight: 800; }
-    .type { color: #c4b5fd; background: rgba(124,58,237,.11); border: 1px solid rgba(124,58,237,.20); border-radius: 999px; padding: 4px 8px; font-weight: 800; }
-    .overview { color: #9693a1; font-size: 12px; line-height: 1.65; min-height: 98px; margin: 0 2px 7px 2px; }
-    .watch-box { border-radius: 18px; padding: 14px; margin-top: 12px; background: linear-gradient(145deg, rgba(255,255,255,.045), rgba(255,255,255,.018)); border: 1px solid rgba(255,255,255,.075); box-shadow: inset 0 1px 0 rgba(255,255,255,.025); }
-    .watch-heading { color: #f1eef7; font-size: 12px; font-weight: 900; letter-spacing: 1.7px; text-transform: uppercase; margin: 0 0 11px 2px; }
-    .provider-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; margin: 0 0 11px 0; }
-    .provider-tile { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 12px; background: rgba(255,255,255,.035); border: 1px solid rgba(255,255,255,.075); text-decoration: none !important; transition: .18s ease; }
-    .provider-tile:hover { background: rgba(124,58,237,.14); border-color: rgba(167,139,250,.38); transform: translateY(-2px); }
-    .provider-logo { width: 38px; height: 38px; flex: 0 0 38px; border-radius: 9px; overflow: hidden; display: flex; align-items: center; justify-content: center; background: #fff; }
-    .provider-logo img { width: 38px; height: 38px; object-fit: cover; }
-    .provider-info { min-width: 0; flex: 1; }
-    .provider-name { color: #f4f1f8; font-size: 11px; font-weight: 850; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .provider-type { display: inline-block; color: #c4b5fd; font-size: 8px; font-weight: 900; letter-spacing: 1px; margin-top: 3px; padding: 2px 5px; border-radius: 5px; background: rgba(124,58,237,.12); border: 1px solid rgba(124,58,237,.18); }
-    .type-free { color: #86efac; background: rgba(34,197,94,.12); border: 1px solid rgba(34,197,94,.20); }
-    .type-rent { color: #fca5a5; background: rgba(239,68,68,.12); border: 1px solid rgba(239,68,68,.20); }
-    .provider-arrow { color: #c4b5fd; font-size: 15px; flex: 0 0 auto; }
-    .watch-action { display: flex; align-items: center; justify-content: center; width: 100%; box-sizing: border-box; border-radius: 12px; padding: 10px 12px; margin-top: 8px; text-decoration: none !important; font-size: 10px; font-weight: 850; color: #f5f3f7 !important; background: rgba(255,255,255,.045); border: 1px solid rgba(255,255,255,.08); }
-    .watch-action:hover { background: rgba(124,58,237,.15); border-color: rgba(167,139,250,.35); }
-    .empty-watch { color: #858292; font-size: 11px; line-height: 1.5; padding: 9px; border-radius: 11px; background: rgba(255,255,255,.025); }
-    .search-hero { border: 1px solid rgba(255,255,255,.08); background: linear-gradient(135deg, rgba(124,58,237,.11), rgba(236,72,153,.06)); border-radius: 22px; padding: 24px; margin-bottom: 18px; }
-    .result-row { border: 1px solid rgba(255,255,255,.07); border-radius: 18px; padding: 13px; background: rgba(255,255,255,.025); margin-bottom: 14px; }
-    div[data-baseweb="select"] > div, div[data-baseweb="input"] > div { border-radius: 14px !important; background: rgba(255,255,255,.035) !important; border-color: rgba(255,255,255,.08) !important; }
-    .stButton > button { border-radius: 12px !important; font-weight: 800 !important; background: linear-gradient(135deg, #7c3aed, #db2777) !important; color: #fff !important; border: 1px solid rgba(255,255,255,.08) !important; }
-    button[data-baseweb="tab"] { font-weight: 800 !important; }
+    .hero-gradient {
+        position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        background: linear-gradient(90deg, rgba(11,11,13,1) 0%, rgba(11,11,13,0.85) 50%, transparent 100%);
+        display: flex; flex-direction: column; justify-content: center; padding: 40px 60px;
+    }
+    .hero-tag { display: inline-block; padding: 5px 12px; background: #e50914; color: #fff; font-size: 11px; font-weight: 800; letter-spacing: 2px; border-radius: 4px; text-transform: uppercase; margin-bottom: 12px; width: fit-content; }
+    .hero-title { font-size: 45px; font-weight: 900; line-height: 1.1; margin: 0 0 10px 0; color: #fff; letter-spacing: -2px; }
+    .hero-desc { font-size: 14px; color: #a1a1aa; max-width: 500px; line-height: 1.5; margin-bottom: 0; }
+
+    .row-title { font-size: 22px; font-weight: 700; color: #e4e4e7; margin: 25px 0 12px 0; padding-left: 10px; border-left: 4px solid #e50914; line-height: 1; }
+    button[data-baseweb="tab"] { font-weight: 600 !important; font-size: 16px !important; color: #71717a !important; background: transparent !important; border: none !important;}
+    button[data-baseweb="tab"][aria-selected="true"] { color: #fff !important; }
+    div[data-baseweb="tab-highlight"] { background-color: #e50914 !important; height: 3px !important; }
+
+    .movie-card-box {
+        background: #141418; border-radius: 12px; overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.08); transition: 0.3s ease;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.3); margin-bottom: 15px; position: relative;
+    }
+    .movie-card-box:hover { transform: translateY(-4px); border-color: rgba(229, 9, 20, 0.5); }
+    
+    .poster-wrap { position: relative; width: 100%; aspect-ratio: 2/3; background: #18181b; overflow: hidden; }
+    .poster-wrap img { width: 100%; height: 100% !important; object-fit: cover; }
+    .rating-badge { position: absolute; top: 8px; right: 8px; background: rgba(0,0,0,0.85); padding: 3px 8px; border-radius: 6px; font-size: 11px; font-weight: 800; color: #fbbf24; border: 1px solid rgba(251,191,36,0.3); z-index: 5; }
+    
+    .card-info { padding: 10px; position: relative; z-index: 5; }
+    .c-title { font-size: 14px; font-weight: 700; color: #fff; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .c-meta { font-size: 11px; color: #94a3b8; display: flex; justify-content: space-between; margin-bottom: 6px; }
+    
+    .prov-tray { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 8px; position: relative; z-index: 10; min-height: 28px; }
+    .prov-tray a { display: inline-flex; transition: transform 0.2s; cursor: pointer; }
+    .prov-tray a:hover { transform: scale(1.15); }
+    .prov-tray img { width: 24px; height: 24px; border-radius: 4px; object-fit: cover; border: 1px solid rgba(255,255,255,0.2); }
+    
+    .play-overlay { position: absolute; top: 0; left: 0; width: 100% !important; height: 100% !important; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.4); opacity: 0; transition: 0.3s ease; text-decoration: none; z-index: 2; }
+    .poster-wrap:hover .play-overlay { opacity: 1; }
+    .play-btn { width: 40px; height: 40px; background: rgba(229,9,20,0.9); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 15px; box-shadow: 0 0 15px rgba(229,9,20,0.6); }
+
+    .booking-btn {
+        display: block; text-align: center; background: #e50914; color: white !important;
+        padding: 6px; border-radius: 6px; text-decoration: none; font-weight: 800;
+        font-size: 11px; margin-bottom: 8px; transition: 0.2s;
+    }
+    .booking-btn:hover { background: #ff1a25; color: white !important; }
+
+    div[data-baseweb="select"] > div, div[data-baseweb="input"] > div { border-radius: 8px !important; background: #18181b !important; border-color: #27272a !important; color: white !important; font-size: 14px !important;}
+    .stButton > button, div[data-testid="stFormSubmitButton"] > button { border-radius: 8px !important; font-weight: 700 !important; background: #e50914 !important; color: #fff !important; border: none !important; padding: 6px 16px !important; transition: .2s !important; }
+    .stButton > button:hover, div[data-testid="stFormSubmitButton"] > button:hover { background: #f11c27 !important; transform: scale(1.02); }
     </style>
     """,
     unsafe_allow_html=True,
 )
 
 # =========================================================
-# API HELPER
+# API HELPER & LOGIC
 # =========================================================
-
 @st.cache_data(ttl=3600)
 def tmdb_get(endpoint, params=None):
     if not TMDB_TOKEN: return {}
@@ -132,316 +164,320 @@ def tmdb_get(endpoint, params=None):
     headers = {"accept": "application/json"}
     if TMDB_TOKEN.startswith("eyJ"): headers["Authorization"] = f"Bearer {TMDB_TOKEN}"
     else: request_params["api_key"] = TMDB_TOKEN
-
     try:
         response = requests.get(TMDB_BASE + endpoint, headers=headers, params=request_params, timeout=15)
         if response.status_code == 200: return response.json()
-    except Exception:
-        pass
+    except: pass
     return {}
 
-# =========================================================
-# EXACT TOPIC/STORY RECOMMENDATION LOGIC
-# =========================================================
+@st.cache_data(ttl=3600)
+def get_now_playing_movies():
+    res = tmdb_get("/movie/now_playing", {"language": "en-US", "page": 1, "region": "IN"})
+    return res.get("results", [])[:10] if isinstance(res, dict) else []
+
+@st.cache_data(ttl=3600)
+def get_upcoming_movies():
+    res = tmdb_get("/movie/upcoming", {"language": "en-US", "page": 1, "region": "IN"})
+    return res.get("results", [])[:12] if isinstance(res, dict) else []
+
+@st.cache_data(ttl=3600)
+def get_surprise_movie():
+    data = tmdb_get("/discover/movie", {"language": "en-US", "sort_by": "popularity.desc", "with_original_language": "hi", "vote_count.gte": 50, "vote_average.gte": 6.8, "page": random.randint(1, 3)})
+    res = data.get("results", []) if isinstance(data, dict) else []
+    return random.choice(res) if res else None
 
 def search_movie(title):
-    data = tmdb_get("/search/movie", {"query": title, "include_adult": False, "language": "en-US", "page": 1})
-    results = data.get("results", [])
+    results = tmdb_get("/search/movie", {"query": title, "include_adult": False, "language": "en-US", "page": 1}).get("results", [])
     if not results: return None
     exact = [i for i in results if i.get("title", "").lower() == title.lower()]
     return exact[0] if exact else results[0]
 
 def search_tv(title, language_code=None):
-    data = tmdb_get("/search/tv", {"query": title, "include_adult": False, "language": "en-US", "page": 1})
-    results = data.get("results", [])
-    if language_code:
-        results = [i for i in results if i.get("original_language") == language_code] or results
+    results = tmdb_get("/search/tv", {"query": title, "include_adult": False, "language": "en-US", "page": 1}).get("results", [])
     if not results: return None
+    if language_code: 
+        results = [i for i in results if i.get("original_language") == language_code] or results
     exact = [i for i in results if i.get("name", "").lower() == title.lower()]
     return exact[0] if exact else results[0]
 
-def search_person(name):
-    data = tmdb_get("/search/person", {"query": name, "include_adult": False, "language": "en-US", "page": 1})
-    results = data.get("results", [])
-    return results[0] if results else None
+def search_person(name): 
+    res = tmdb_get("/search/person", {"query": name, "include_adult": False, "language": "en-US", "page": 1}).get("results", [])
+    return res[0] if res else None
 
 def get_person_credits(person_id):
     data = tmdb_get(f"/person/{person_id}/combined_credits", {"language": "en-US"})
+    if not isinstance(data, dict): return []
     cast = data.get("cast", [])
     crew = [c for c in data.get("crew", []) if c.get("job") == "Director"]
     combined = cast + crew
     combined.sort(key=lambda x: x.get("vote_count", 0), reverse=True)
-    seen = set()
-    unique_credits = []
+    seen = set(); unique = []
     for item in combined:
-        if item["id"] not in seen and item.get("poster_path"):
-            seen.add(item["id"])
-            unique_credits.append(item)
-    return unique_credits[:10]
+        if item.get("id") not in seen and item.get("poster_path"):
+            seen.add(item.get("id"))
+            unique.append(item)
+    return unique[:10]
 
 def get_smart_recommendations(media_type, seed_id, language_code=None, count=5):
-    """
-    STRICT TOPIC MATCHING (Kill -> Kill, God -> God)
-    """
-    seen = {seed_id}
-    final_results = []
-    
+    seen = {seed_id}; final_results = []
     details = tmdb_get(f"/{media_type}/{seed_id}", {"append_to_response": "keywords"})
-    if not details: return []
-
-    genres = [str(g["id"]) for g in details.get("genres", [])]
+    if not isinstance(details, dict): return []
+    genres = [str(g.get("id")) for g in details.get("genres", []) if g.get("id")]
     kw_key = "results" if media_type == "tv" else "keywords"
-    keywords = [str(k["id"]) for k in details.get("keywords", {}).get(kw_key, [])]
+    kw_obj = details.get("keywords", {})
+    keywords_list = kw_obj.get(kw_key, []) if isinstance(kw_obj, dict) else []
+    keywords = [str(k.get("id")) for k in keywords_list if k.get("id")]
 
-    # LAYER 1: 100% Keyword Matching (Topic Lock)
-    if keywords:
-        params = {
-            "language": "en-US",
-            "sort_by": "popularity.desc",
-            "page": 1,
-            "with_keywords": "|".join(keywords[:7]) # TOP 7 Keywords ensure exactly the same topic
-        }
-        if genres: params["with_genres"] = genres[0] # To ensure Action remains Action, Horror remains Horror
+    if genres:
+        params = {"language": "en-US", "sort_by": "vote_average.desc", "vote_count.gte": 20, "with_genres": genres[0], "page": 1}
+        if keywords: params["with_keywords"] = "|".join(keywords[:4])
         if language_code: params["with_original_language"] = language_code
-        
         disc = tmdb_get(f"/discover/{media_type}", params)
-        for item in disc.get("results", []):
-            if item["id"] not in seen:
-                final_results.append(item)
-                seen.add(item["id"])
-                if len(final_results) >= count: return final_results[:count]
+        if isinstance(disc, dict):
+            for item in disc.get("results", []):
+                if item.get("id") not in seen:
+                    final_results.append(item); seen.add(item.get("id"))
+                    if len(final_results) >= count: return final_results[:count]
 
-    # LAYER 2: Similar Vibe Mapping (Fallback if exact keywords don't yield 5 movies)
     if len(final_results) < count:
-        sim_data = tmdb_get(f"/{media_type}/{seed_id}/similar", {"language": "en-US", "page": 1}).get("results", [])
-        for item in sim_data:
-            if language_code and item.get("original_language") != language_code: continue
-            if item["id"] not in seen:
-                final_results.append(item)
-                seen.add(item["id"])
-                if len(final_results) >= count: return final_results[:count]
-
+        sim = tmdb_get(f"/{media_type}/{seed_id}/similar", {"language": "en-US", "page": 1})
+        if isinstance(sim, dict):
+            for item in sim.get("results", []):
+                if language_code and item.get("original_language") != language_code: continue
+                if item.get("id") not in seen:
+                    final_results.append(item); seen.add(item.get("id"))
+                    if len(final_results) >= count: return final_results[:count]
+                
     return final_results[:count]
 
 def multi_search(query):
     query = str(query or "").strip()
     if not query: return []
-    results = []
-    m_data = tmdb_get("/search/movie", {"query": query, "include_adult": False, "language": "en-US", "page": 1})
-    for i in m_data.get("results", [])[:8]: i["media_type"] = "movie"; results.append(i)
-    t_data = tmdb_get("/search/tv", {"query": query, "include_adult": False, "language": "en-US", "page": 1})
-    for i in t_data.get("results", [])[:8]: i["media_type"] = "tv"; results.append(i)
-
-    unique_results = []
-    seen = set()
-    for item in results:
+    m_data = tmdb_get("/search/movie", {"query": query, "include_adult": False, "language": "en-US", "page": 1}).get("results", [])[:8]
+    t_data = tmdb_get("/search/tv", {"query": query, "include_adult": False, "language": "en-US", "page": 1}).get("results", [])[:8]
+    for i in m_data: i["media_type"] = "movie"
+    for i in t_data: i["media_type"] = "tv"
+    unique = []; seen = set()
+    for item in m_data + t_data:
         key = (item.get("media_type"), item.get("id"))
-        if key not in seen:
-            seen.add(key)
-            unique_results.append(item)
+        if key not in seen: seen.add(key); unique.append(item)
+    unique.sort(key=lambda x: float(x.get("popularity") or 0), reverse=True)
+    return unique[:10]
 
-    unique_results.sort(key=lambda x: float(x.get("popularity") or 0), reverse=True)
-    return unique_results[:8]
-
-# =========================================================
-# WATCH PROVIDERS & DIRECT DEEP LINKS
-# =========================================================
-
-def get_watch_providers(media_type, media_id):
-    data = tmdb_get(f"/{media_type}/{media_id}/watch/providers")
-    return data.get("results", {}).get("IN", {}) or {}
+def get_watch_providers(media_type, media_id): 
+    res = tmdb_get(f"/{media_type}/{media_id}/watch/providers")
+    if not isinstance(res, dict): return {}
+    provs = res.get("results", {})
+    return provs.get("IN", {}) if isinstance(provs, dict) else {}
 
 def encoded(text): return urllib.parse.quote_plus(str(text))
 
 def provider_search_url(provider_name, title, media_type):
-    name = provider_name.lower()
+    name = str(provider_name).lower()
     q = encoded(title)
     if "netflix" in name: return f"https://www.netflix.com/search?q={q}"
-    if "prime video" in name or "amazon prime" in name: return f"https://www.primevideo.com/search/ref=atv_nb_sr?phrase={q}"
+    if "prime" in name or "amazon" in name: return f"https://www.primevideo.com/search/ref=atv_nb_sr?phrase={q}"
     if "hotstar" in name or "disney" in name: return f"https://www.hotstar.com/in/explore?searchQuery={q}"
     if "jiocinema" in name: return f"https://www.jiocinema.com/search?q={q}"
     if "zee5" in name: return f"https://www.zee5.com/search?q={q}"
-    if "sonyliv" in name or "sony liv" in name: return f"https://www.sonyliv.com/search/{q}"
-    if "youtube" in name: return f"https://www.youtube.com/results?search_query={encoded(f'{title} full {media_type}')}"
-    if "apple tv" in name: return f"https://tv.apple.com/in/search?term={q}"
-    if "mx player" in name: return f"https://www.mxplayer.in/search/{q}"
-    if "shemaroo" in name: return f"https://www.shemaroome.com/search?q={q}"
+    if "sonyliv" in name: return f"https://www.sonyliv.com/search/{q}"
+    if "apple" in name: return f"https://tv.apple.com/in/search?term={q}"
     return f"https://www.google.com/search?q={encoded(f'{title} watch on {provider_name}')}"
 
-def youtube_link(title, content_type):
-    suffix = "web series" if content_type == "tv" else "movie"
-    return f"https://www.youtube.com/results?search_query={encoded(f'{title} official trailer {suffix}')}"
-
-def safe_text(value, fallback=""): return html.escape(str(value if value is not None else fallback))
-
-def show_watch_box(title, providers, content_type):
-    raw_entries = []
-    seen_names = set()
-    category_priority = {
-        "free": {"prio": 0, "label": "FREE", "css": "type-free"},
-        "ads": {"prio": 1, "label": "WITH ADS", "css": "type-free"},
-        "flatrate": {"prio": 2, "label": "STREAM", "css": ""},
-        "rent": {"prio": 3, "label": "RENT", "css": "type-rent"},
-        "buy": {"prio": 4, "label": "BUY", "css": "type-rent"}
-    }
-
-    for category in ["free", "ads", "flatrate", "rent", "buy"]:
-        for p in providers.get(category, []) or []:
-            name = p.get("provider_name")
-            if name not in seen_names:
-                seen_names.add(name)
-                cat_info = category_priority[category]
-                raw_entries.append({
-                    "name": name,
-                    "logo": p.get("logo_path"),
-                    "type": cat_info["label"],
-                    "css_class": cat_info["css"],
-                    "priority": cat_info["prio"]
-                })
-
-    sorted_entries = sorted(raw_entries, key=lambda x: x["priority"])
-
-    if not any("youtube" in e["name"].lower() for e in sorted_entries):
-        sorted_entries.append({
-            "name": "YouTube",
-            "logo": "/pTnn5JwWr4p3pG8H6VrpiQo7Vs0.jpg",
-            "type": "SEARCH",
-            "css_class": "",
-            "priority": 5
-        })
-
-    st.markdown('<div class="watch-box"><div class="watch-heading">📺 WHERE TO WATCH IN INDIA</div>', unsafe_allow_html=True)
-    if sorted_entries:
-        cards = []
-        for e in sorted_entries:
-            icon = f'<img src="{PROVIDER_LOGO_BASE}{html.escape(e["logo"])}" alt="logo">' if e.get("logo") else '<div class="provider-fallback-icon">📺</div>'
-            url = provider_search_url(e["name"], title, content_type)
-            css_class = f'provider-type {e.get("css_class", "")}'
-            cards.append(f'<a class="provider-tile" href="{html.escape(url)}" target="_blank">'
-                         f'<div class="provider-logo">{icon}</div>'
-                         f'<div class="provider-info">'
-                         f'<div class="provider-name">{safe_text(e["name"])}</div>'
-                         f'<div class="{css_class}">{safe_text(e["type"])}</div>'
-                         f'</div><div class="provider-arrow">↗</div></a>')
-        st.markdown('<div class="provider-grid">' + ''.join(cards) + '</div>', unsafe_allow_html=True)
-    else:
-        st.markdown('<div class="empty-watch">India me is title ki OTT details nahi mili.</div>', unsafe_allow_html=True)
-
-    st.markdown(f'<a class="watch-action" href="{html.escape(youtube_link(title, content_type))}" target="_blank" style="background: rgba(255, 0, 0, 0.15); color: #ff4b4b !important; border-color: rgba(255, 0, 0, 0.3);">▶️ &nbsp; Watch Official Trailer</a></div>', unsafe_allow_html=True)
-
-def show_movie_card(movie):
-    title = movie.get("title") or movie.get("name") or "Unknown"
-    media_type = movie.get("media_type") or ("movie" if "title" in movie else "tv")
-    m_id = str(movie.get("id"))
-    poster = movie.get("poster_path")
-    rating = float(movie.get("vote_average") or 0)
-    year = (movie.get("release_date") or movie.get("first_air_date") or "N/A")[:4]
-    overview = movie.get("overview", "No overview available.")
-
-    st.markdown('<div class="movie-card">', unsafe_allow_html=True)
-    if poster:
-        st.markdown('<div class="poster-frame">', unsafe_allow_html=True)
-        st.image(IMAGE_BASE + poster, use_container_width=True)
-        st.markdown('</div>', unsafe_allow_html=True)
-    
-    st.markdown(f"""
-        <div class="card-title">{safe_text(title)}</div>
-        <div class="card-meta"><span class="rating">⭐ {rating:.1f}</span> &nbsp; • &nbsp; {year} &nbsp; <span class="type">{media_type.upper()}</span></div>
-        <div class="overview">{safe_text(overview[:230])}{'...' if len(overview) > 230 else ''}</div>
-    """, unsafe_allow_html=True)
-    
-    show_watch_box(title, get_watch_providers(media_type, m_id), media_type)
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    # --- RATING WIDGET ---
-    st.markdown(f"<div style='font-size:12px; color:#9c99a8; margin-top:-5px; padding-left:12px;'>Rate '{title[:15]}...':</div>", unsafe_allow_html=True)
-    current_rating = st.session_state.ratings.get(m_id)
-    user_rating = st.feedback("stars", key=f"rate_{m_id}_{media_type}")
-    
-    if user_rating is not None and user_rating != current_rating:
-        st.session_state.ratings[m_id] = user_rating
-        st.toast(f"Saved {user_rating + 1} star rating for {title}!")
+def bookmyshow_main_link(): return "https://in.bookmyshow.com/"
+def youtube_link(title, content_type): return f"https://www.youtube.com/results?search_query={encoded(f'{title} official trailer {content_type}')}"
+def safe_text(value): return html.escape(str(value if value is not None else ""))
 
 # =========================================================
-# UI HEADER
+# CLEAN SAFE HTML CARD RENDERER (WITH SMART OTT FALLBACK)
+# =========================================================
+def show_movie_card(movie, show_booking=False):
+    title = movie.get("title") or movie.get("name") or "Unknown"
+    media_type = movie.get("media_type") or ("movie" if "title" in movie else "tv")
+    poster = movie.get("poster_path")
+    poster_url = IMAGE_BASE + poster if poster else "https://via.placeholder.com/500x750/18181b/ffffff?text=No+Image"
+    rating = float(movie.get("vote_average") or 0)
+    year = str(movie.get("release_date") or movie.get("first_air_date") or "N/A")[:4]
+    
+    overview_raw = str(movie.get("overview") or "Story details not available.")
+    overview = html.escape(overview_raw)
+
+    providers = get_watch_providers(media_type, str(movie.get("id")))
+    seen_logos = set()
+    logos_list_html = ""
+    
+    if isinstance(providers, dict):
+        for category in ["flatrate", "free", "rent", "buy"]:
+            cat_provs = providers.get(category, [])
+            if isinstance(cat_provs, list):
+                for p in cat_provs:
+                    path = p.get("logo_path")
+                    p_name = p.get("provider_name", "OTT")
+                    if path and path not in seen_logos:
+                        seen_logos.add(path)
+                        p_url = provider_search_url(p_name, title, media_type)
+                        logos_list_html += f'<a href="{p_url}" target="_blank" title="Watch on {html.escape(str(p_name))}"><img src="{PROVIDER_LOGO_BASE}{path}"></a>'
+
+    yt_link = youtube_link(title, media_type)
+    safe_title = safe_text(title)
+
+    # Smart Fallback if No OTT Provider Found
+    if not logos_list_html:
+        logos_list_html = f'<div style="width: 100%;"><div style="font-size: 11px; color: #a1a1aa; line-height: 1.4; margin-bottom: 8px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; text-overflow: ellipsis;">{overview}</div><a href="{yt_link}" target="_blank" style="display:block; text-align:center; background:#27272a; border: 1px solid #3f3f46; color:#fff; padding:5px; border-radius:4px; font-size:11px; font-weight:700; text-decoration:none; transition: 0.2s;">▶ Watch on YouTube</a></div>'
+
+    booking_btn_html = ""
+    if show_booking:
+        bms_url = bookmyshow_main_link()
+        booking_btn_html = f'<a href="{bms_url}" target="_blank" class="booking-btn">🎟️ Book Tickets</a>'
+
+    # NO indentation here to strictly prevent Markdown block errors
+    card_html = f"""<div class="movie-card-box">
+<div class="poster-wrap">
+<img src="{poster_url}" alt="Poster">
+<div class="rating-badge">⭐ {rating:.1f}</div>
+<a href="{yt_link}" target="_blank" class="play-overlay"><div class="play-btn">▶</div></a>
+</div>
+<div class="card-info">
+<div class="c-title" title="{safe_title}">{safe_title}</div>
+<div class="c-meta"><span>{year}</span><span style="text-transform: uppercase;">{media_type}</span></div>
+{booking_btn_html}
+<div class="prov-tray">{logos_list_html}</div>
+</div>
+</div>"""
+
+    st.markdown(card_html, unsafe_allow_html=True)
+
+# =========================================================
+# UI MAIN LAYOUT
 # =========================================================
 
 st.markdown("""
-    <div class="brand-row">
-        <div class="brand">🎬 MovieHub<span>-India</span> AI</div>
-        <div class="top-pill">Movies + Web Series • India</div>
+    <div class="hero-banner">
+        <div class="hero-gradient">
+            <div class="hero-tag">MD MOVIES AI</div>
+            <div class="hero-title">MovieHub</div>
+            <div class="hero-desc">Powered by exact semantic plot matching. Discover your favorite Hindi & Global blockbusters effortlessly.</div>
+        </div>
     </div>
 """, unsafe_allow_html=True)
 
-st.html("""
-    <div class="hero-wrap">
-        <div class="hero-glow"></div>
-        <div class="hero-content">
-            <div class="eyebrow">AI POWERED ENTERTAINMENT DISCOVERY</div>
-            <div class="hero-title">Your next<br><span class="accent">favourite story.</span></div>
-            <div class="hero-copy">Discover movies, web series, and explore your favourite actors' work all in one place.</div>
-            <div class="hero-tags"><span>🎬 Movies</span> <span>📺 Web Series</span> <span>🎭 Cast & Crew</span></div>
-        </div>
-    </div>
-""")
-
 # =========================================================
-# TABS
+# PERSISTENT PAGE NAVIGATION
 # =========================================================
+pages = [
+    "🔥 Home",
+    "🎟️ Upcoming",
+    "🎬 Movie Match",
+    "📺 Series Match",
+    "🎭 Cast & crew",
+    "🕒 History",
+]
 
-tab_search, tab_movies, tab_series, tab_cast, tab_history = st.tabs(["🔎 Global Search", "🎬 Movies", "📺 Web Series", "🎭 Cast & Crew", "🕒 History"])
-language_map = {"All Languages": None, "Hindi": "hi", "English": "en", "Tamil": "ta", "Telugu": "te", "Malayalam": "ml"}
+if "active_page" not in st.session_state:
+    st.session_state.active_page = "🔥 Home"
 
-# ----------------- TAB 1: SEARCH -----------------
-with tab_search:
-    st.markdown('<div class="search-hero"><div class="section-title">🔎 Global Search</div><div class="section-subtitle">Directly search any movie or show to check where to watch.</div></div>', unsafe_allow_html=True)
-    g_query = st.text_input("Search Anything...", key="g_q")
-    
-    # Jab button dabaye, data fetch karke UI state mein save karo
-    if st.button("Search") and g_query:
-        with st.spinner("Searching..."):
-            results = multi_search(g_query)
-            st.session_state.ui["search_results"] = results
-            if results: add_to_history(results[0], results[0].get("media_type", "movie")) 
+selected_page = st.segmented_control(
+    "Navigation",
+    pages,
+    default=st.session_state.active_page,
+    label_visibility="collapsed",
+)
 
-    # Hamesha UI state se data read karo (Rating dene par gayab nahi hoga)
-    if st.session_state.ui["search_results"]:
-        for r in st.session_state.ui["search_results"]:
-            st.markdown('<div class="result-row">', unsafe_allow_html=True)
-            col_img, col_info = st.columns([1, 4])
+if selected_page:
+    st.session_state.active_page = selected_page
+
+language_map = {
+    "All Languages": None, 
+    "Hindi": "hi", 
+    "English": "en", 
+    "Tamil": "ta", 
+    "Telugu": "te", 
+    "Malayalam": "ml", 
+    "Kannada": "kn", 
+    "Marathi": "mr"
+}
+
+if st.session_state.active_page == "🔥 Home":
+    st.markdown('<div class="row-title">🔍 Global Search</div>', unsafe_allow_html=True)
+
+    with st.form(key="home_search_form"):
+        col1, col2 = st.columns([4, 1])
+        with col1:
+            h_query = st.text_input("Enter Movie or Series Name...", label_visibility="collapsed", placeholder="Search any movie or web series globally...")
+        with col2:
+            h_search_btn = st.form_submit_button("Search", use_container_width=True)
             
-            title = r.get("title") or r.get("name") or "Unknown"
-            media_type = r.get("media_type", "movie")
-            m_id = str(r.get("id"))
-            
-            with col_img:
-                if r.get("poster_path"): st.image(IMAGE_BASE + r.get("poster_path"))
-            with col_info:
-                st.markdown(f"### {title}")
-                st.write(r.get("overview", "No overview."))
-                providers = get_watch_providers(media_type, m_id)
-                show_watch_box(title, providers, media_type)
-                
-                st.markdown(f"<div style='font-size:12px; color:#9c99a8; margin-top:10px; padding-left:2px;'>Rate '{title[:15]}...':</div>", unsafe_allow_html=True)
-                current_rating = st.session_state.ratings.get(m_id)
-                user_rating = st.feedback("stars", key=f"rate_global_{m_id}_{media_type}")
-                if user_rating is not None and user_rating != current_rating:
-                    st.session_state.ratings[m_id] = user_rating
-                    st.toast(f"Saved {user_rating + 1} star rating for {title}!")
-                    
-            st.markdown('</div>', unsafe_allow_html=True)
+    if h_query or h_search_btn:
+        if h_query:
+            with st.spinner("Searching..."):
+                res = multi_search(h_query)
+                st.session_state.ui["home_search_results"] = res
+                if res: add_to_history(res[0], res[0].get("media_type", "movie"))
 
-# ----------------- TAB 2: MOVIES -----------------
-with tab_movies:
-    st.markdown('<div class="section-head"><div><div class="section-title">🎬 Find Your Next Movie</div><div class="section-subtitle">Apni favourite movie ka naam likho aur similar movies discover karo.</div></div></div>', unsafe_allow_html=True)
-    col1, col2 = st.columns([3, 1])
-    with col1: m_query = st.text_input("Movie Name", placeholder="e.g. Hanuman, RRR...", key="m_q")
-    with col2: m_lang = st.selectbox("Language", list(language_map.keys()), key="m_l")
-    
-    if st.button("✨ Recommend Movies"):
-        if not m_query: st.warning("Movie ka naam enter karein!")
-        else:
-            with st.spinner("Finding matches..."):
+    if st.session_state.ui.get("home_search_results"):
+        st.markdown("<br>", unsafe_allow_html=True)
+        for i in range(0, len(st.session_state.ui["home_search_results"]), 5):
+            cols = st.columns(5)
+            for col, r in zip(cols, st.session_state.ui["home_search_results"][i:i+5]):
+                with col: show_movie_card(r, show_booking=False)
+        st.markdown("<hr style='border-color: #27272a; margin: 20px 0;'>", unsafe_allow_html=True)
+
+    col_a, col_b = st.columns([3, 1])
+    with col_a: st.markdown('<div class="row-title">🍿 Now Playing in Theaters & OTT</div>', unsafe_allow_html=True)
+    with col_b:
+        st.markdown('<br>', unsafe_allow_html=True)
+        if st.button("🎲 Surprise Pick", use_container_width=True): st.session_state.ui["surprise_movie"] = get_surprise_movie()
+
+    if st.session_state.ui.get("surprise_movie"):
+        st.success("✨ Random Highly-Rated Pick:")
+        c1, c2, c3, c4, c5 = st.columns(5)
+        with c1: show_movie_card(st.session_state.ui["surprise_movie"], show_booking=True)
+        st.markdown("<hr style='border-color: #27272a'>", unsafe_allow_html=True)
+
+    now_playing = get_now_playing_movies()
+    if now_playing:
+        for i in range(0, len(now_playing), 5):
+            cols = st.columns(5)
+            for col, rec in zip(cols, now_playing[i:i+5]):
+                with col: show_movie_card(rec, show_booking=True)
+
+elif st.session_state.active_page == "🎟️ Upcoming":
+    st.markdown('<div class="row-title">🎟️ Upcoming Movies (Theatrical & OTT)</div>', unsafe_allow_html=True)
+
+    with st.form(key="upcoming_form"):
+        col_up_1, col_up_2 = st.columns([3, 1])
+        with col_up_1:
+            up_query = st.text_input("Search upcoming movie...", placeholder="Type movie name to filter...", label_visibility="collapsed")
+        with col_up_2:
+            up_search_btn = st.form_submit_button("Filter", use_container_width=True)
+            
+    upcoming_list = get_upcoming_movies()
+    if up_query:
+        upcoming_list = [m for m in upcoming_list if up_query.lower() in (m.get("title") or m.get("name") or "").lower()]
+
+    if upcoming_list:
+        for i in range(0, len(upcoming_list), 5):
+            cols = st.columns(5)
+            for col, movie in zip(cols, upcoming_list[i:i+5]):
+                with col: show_movie_card(movie, show_booking=True)
+    else:
+        st.info("Aisi koi upcoming movie nahi mili.")
+
+elif st.session_state.active_page == "🎬 Movie Match":
+    st.markdown('<div class="row-title" style="margin-bottom: 20px;">Exact Story Match</div>', unsafe_allow_html=True)
+
+    with st.form(key="movie_match_form"):
+        col1, col2, col3 = st.columns([3, 1, 1])
+        with col1: 
+            m_query = st.text_input("Movie Name", label_visibility="collapsed", placeholder="Enter Movie Name")
+        with col2: 
+            m_lang = st.selectbox("Language", list(language_map.keys()), label_visibility="collapsed")
+        with col3:
+            match_btn = st.form_submit_button("Match Story", use_container_width=True)
+
+    if m_query or match_btn:
+        if m_query:
+            with st.spinner("Analyzing plot keywords..."):
                 movie = search_movie(m_query)
                 st.session_state.ui["m_seed"] = movie
                 if movie:
@@ -450,29 +486,31 @@ with tab_movies:
                 else:
                     st.session_state.ui["m_recs"] = []
 
-    # Safe render from state
     if st.session_state.ui.get("m_seed"):
-        seed_movie = st.session_state.ui["m_seed"]
-        st.markdown(f"### ✨ Top Topic Matches for {seed_movie['title']}")
+        st.markdown(f"### Matches for '{st.session_state.ui['m_seed']['title']}'")
         recs = st.session_state.ui["m_recs"]
         if recs:
-            cols = st.columns(min(len(recs), 5))
-            for col, rec in zip(cols, recs):
-                with col: show_movie_card(rec)
-        else:
-            st.info("No exact matches found for this topic.")
+            for i in range(0, len(recs), 5):
+                cols = st.columns(5)
+                for col, rec in zip(cols, recs[i:i+5]):
+                    with col: show_movie_card(rec, show_booking=False)
+        else: st.info("No exact keyword matches found.")
 
-# ----------------- TAB 3: SERIES -----------------
-with tab_series:
-    st.markdown('<div class="section-head"><div><div class="section-title">📺 Discover Web Series</div><div class="section-subtitle">Favorite show search karein aur waise hi naye shows paayein.</div></div></div>', unsafe_allow_html=True)
-    col1, col2 = st.columns([3, 1])
-    with col1: tv_query = st.text_input("Web Series Name", placeholder="e.g. Panchayat, Breaking Bad...", key="tv_q")
-    with col2: tv_lang = st.selectbox("Language", list(language_map.keys()), key="tv_l")
-    
-    if st.button("✨ Recommend Series"):
-        if not tv_query: st.warning("Web series ka naam enter karein!")
-        else:
-            with st.spinner("Finding matches..."):
+elif st.session_state.active_page == "📺 Series Match":
+    st.markdown('<div class="row-title" style="margin-bottom: 20px;">Web Series Match</div>', unsafe_allow_html=True)
+
+    with st.form(key="series_match_form"):
+        col1, col2, col3 = st.columns([3, 1, 1])
+        with col1: 
+            tv_query = st.text_input("Series Name", label_visibility="collapsed", placeholder="Enter Series Name")
+        with col2: 
+            tv_lang = st.selectbox("Language", list(language_map.keys()), label_visibility="collapsed")
+        with col3:
+            match_tv_btn = st.form_submit_button("Match Concept", use_container_width=True)
+
+    if tv_query or match_tv_btn:
+        if tv_query:
+            with st.spinner("Analyzing plot keywords..."):
                 series = search_tv(tv_query, language_map[tv_lang])
                 st.session_state.ui["tv_seed"] = series
                 if series:
@@ -482,53 +520,49 @@ with tab_series:
                     st.session_state.ui["tv_recs"] = []
 
     if st.session_state.ui.get("tv_seed"):
-        seed_tv = st.session_state.ui["tv_seed"]
-        st.markdown(f"### 🔥 Top Topic Matches for {seed_tv['name']}")
+        st.markdown(f"### Matches for '{st.session_state.ui['tv_seed']['name']}'")
         recs = st.session_state.ui["tv_recs"]
         if recs:
-            cols = st.columns(min(len(recs), 5))
-            for col, rec in zip(cols, recs):
-                with col: show_movie_card(rec)
-        else:
-            st.info("No exact matches found for this topic.")
+            for i in range(0, len(recs), 5):
+                cols = st.columns(5)
+                for col, rec in zip(cols, recs[i:i+5]):
+                    with col: show_movie_card(rec, show_booking=False)
+        else: st.info("No exact matches found.")
 
-# ----------------- TAB 4: CAST & CREW -----------------
-with tab_cast:
-    st.markdown('<div class="search-hero"><div class="section-title">🎭 Explore by Actor or Director</div><div class="section-subtitle">Kisi bhi actor ya director ki best movies ek jagah dekho.</div></div>', unsafe_allow_html=True)
-    person_query = st.text_input("Search Actor or Director", placeholder="e.g. Shahrukh Khan, SS Rajamouli...", key="person_q")
-    
-    if st.button("🔍 Find Work") and person_query:
-        with st.spinner("Loading profile..."):
-            person = search_person(person_query)
-            st.session_state.ui["cast_person"] = person
-            if person:
-                st.session_state.ui["cast_credits"] = get_person_credits(person["id"])
-            else:
-                st.session_state.ui["cast_credits"] = []
+elif st.session_state.active_page == "🎭 Cast & Crew":
+    st.markdown('<div class="row-title" style="margin-bottom: 20px;">Actor/Director Portfolio</div>', unsafe_allow_html=True)
+
+    with st.form(key="cast_form"):
+        col1, col2 = st.columns([4, 1])
+        with col1: 
+            person_query = st.text_input("Search Name", label_visibility="collapsed", placeholder="Search Actor or Director...")
+        with col2:
+            explore_btn = st.form_submit_button("Explore Work", use_container_width=True)
+
+    if person_query or explore_btn:
+        if person_query:
+            with st.spinner("Loading portfolio..."):
+                person = search_person(person_query)
+                st.session_state.ui["cast_person"] = person
+                if person: st.session_state.ui["cast_credits"] = get_person_credits(person["id"])
+                else: st.session_state.ui["cast_credits"] = []
 
     if st.session_state.ui.get("cast_person"):
-        person = st.session_state.ui["cast_person"]
-        st.markdown(f"### 🌟 Best of {person['name']}")
+        st.markdown(f"### Best of {st.session_state.ui['cast_person']['name']}")
         credits = st.session_state.ui["cast_credits"]
         if credits:
             for i in range(0, len(credits), 5):
                 cols = st.columns(5)
                 for col, credit in zip(cols, credits[i:i+5]):
-                    with col: show_movie_card(credit)
-        else:
-            st.info("No major movies/shows found for this person.")
+                    with col: show_movie_card(credit, show_booking=False)
+        else: st.info("No major work found.")
 
-# ----------------- TAB 5: HISTORY -----------------
-with tab_history:
-    st.markdown('<div class="section-head"><div><div class="section-title">🕒 Your Search History</div><div class="section-subtitle">Aapne jo movies aur shows recently dekhe hain.</div></div></div>', unsafe_allow_html=True)
-    
-    if not st.session_state.history:
-        st.info("Aapki history abhi khali hai. Kuch search karein!")
+elif st.session_state.active_page == "🕒 History":
+    st.markdown('<div class="row-title">Recently Viewed</div>', unsafe_allow_html=True)
+    if not st.session_state.history: st.info("History is empty.")
     else:
         history_items = st.session_state.history
         for i in range(0, len(history_items), 5):
             cols = st.columns(5)
             for col, item in zip(cols, history_items[i:i+5]):
-                with col: show_movie_card(item)
-
-st.markdown('<div class="footer"><strong>🎬 MovieHub India - AI</strong><br>Powered by TMDB Native AI & JustWatch OTT Data.</div>', unsafe_allow_html=True)
+                with col: show_movie_card(item, show_booking=False)
