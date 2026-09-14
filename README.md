@@ -8,17 +8,21 @@
 
 [🚀 Live Demo](https://movieapp-india.streamlit.app/) • [📂 GitHub Repository](https://github.com/deepaknagar-dn/WatchHub-India)
 
-## ✨ Key Features
+## 🚀 Key Features
 
-- 🎬 Discover and search movies
-- 📺 Search and explore web series
-- 🎭 Explore cast & crew information
-- 🤖 Get smart movie and series recommendations
-- 🌐 Explore content by language
-- 📺 Find OTT / streaming availability
-- ▶️ Watch official YouTube trailers
-- 🔎 Search across multiple content types
-- 📱 Responsive interface for desktop and mobile
+- 🎬 Movie Discovery
+- 📺 Web Series Discovery
+- 🔍 Global Movie & Series Search
+- 🤖 Content-Based Recommendation System
+- 🎭 Cast & Crew Search
+- ⭐ TMDB Ratings
+- 🎟️ Upcoming Movies
+- 📺 OTT Availability in India
+- ▶️ Official Trailer Search
+- 🕒 Recently Viewed History
+- 🌐 Multiple Language Support
+- 🎲 Surprise Movie Pick
+- 📱 Responsive Streamlit Interface
 
 ## 🛠️ Technologies Used
 
@@ -30,10 +34,20 @@
 - TMDB API
 - GitHub
 - Git LFS
+- HTML/CSS
 
 ## 🤖 Recommendation System
 
-WatchHub India uses TMDB recommendation and similarity data to find related movies and web series based on the selected title.
+MovieHub India uses a content-based recommendation approach to find similar movies and web series.
+
+The system uses:
+- Movie/Series genres
+- Keywords
+- Content information
+- Language filtering
+- TMDB similar-content results
+
+The recommendation system helps users discover content related to the movie or series they select.
 
 ## 📺 Where to Watch
 
@@ -53,12 +67,33 @@ pip install -r requirements.txt
 Run the application:
 streamlit run app.py
 
+## 🔌 TMDB API
+
+MovieHub India uses the TMDB API to fetch live entertainment data such as:
+
+- Movie information
+- Web series information
+- Ratings
+- Posters
+- Cast & Crew
+- Upcoming movies
+- Now playing movies
+- OTT/Watch provider information
+
 🔐 API Configuration
 
 Create:  .streamlit/secrets.toml
 
 Add your TMDB API key:
 TMDB_API_KEY = "YOUR_TMDB_API_KEY"
+
+
+## ☁️ Deployment
+
+The application is deployed using Streamlit Community Cloud.
+
+### Live Demo
+[MovieHub India](https://watchapp-india.streamlit.app/)
 
 📂 Project Structure
 WatchHub-India/
